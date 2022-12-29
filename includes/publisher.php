@@ -232,6 +232,16 @@ class GIW_Publisher{
             $stat_key = $new_post_id == $post_id ? 'updated' : 'new';
             $this->stats[ 'posts' ][ $stat_key ][ $new_post_id ] = get_post_permalink( $new_post_id );
 
+			// Upload the featured image, if any was set
+            // source: fullbright/git-it-write, commit d95887a087c7f5f854eed0f82ec68f151c72da74
+			$featured_image = $front_matter[ 'featured_image' ];
+			if(!empty( $featured_image )){
+				GIW_Utils::log( 'Uploading featured image ' . $featured_image );
+				$this->upload_featured_image($featured_image, $new_post_id);
+			} else {
+				GIW_Utils::log( 'Featured image not set/empty');
+			}            
+
             return $new_post_id;
         }
 
@@ -436,6 +446,67 @@ class GIW_Publisher{
             return new WP_Error( 'image_sideload_failed' );
         }
     }
+
+
+    /**
+     * Uploads a featured image for a post
+     * 
+     * @param   string  $image_url  URL of featured image
+     * @param   string  $post_id    ID of post to upload featured image to
+     * @return  void
+     * 
+     * @author  fullbright
+     * @see     fullbright/git-it-write, commit d95887a087c7f5f854eed0f82ec68f151c72da74
+     * @author  DoItWithASmile
+     */
+    public function upload_featured_image($image_url, $post_id){
+		GIW_Utils::log( sprintf( 'Starting image [%s]', $image_url ) );
+
+        // guard: don't upload featured image if post has already a thumbnail
+		if( has_post_thumbnail( $post_id ) ) {
+			GIW_Utils::log( 'Post ' . $post_id . ' already has a thumbnail. Upload of featured image skipped' );
+			return;
+        }
+
+        GIW_Utils::log( 'Uploading image. URL = ' . $image_url );
+
+        try {
+            // load image from given URL
+            $featured_image_id = media_sideload_image( $image_url, $post_id, null, 'id' );
+            // ... ERROR
+            if(is_wp_error( $featured_image_id )){
+                GIW_Utils::log( 'Image failed sideload. Error: ' . $featured_image_id->get_error_message() );
+                return;
+            }
+            // ... SUCCESS
+            GIW_Utils::log( 'Image successfully sideloaded. ID = ' . $featured_image_id );
+
+            // get URL for uploaded featured image
+            $featured_image_url = wp_get_attachment_url( $featured_image_id );
+            // ... ERROR
+            if(is_wp_error( $featured_image_url )){
+                GIW_Utils::log( 'Featured image failed URL. Error: ' . $featured_image_url->get_error_message() );
+                return;
+            }
+            // ... EMPTY
+            if( empty( $featured_image_url ) ){
+                GIW_Utils::log( 'Featured image failed URL. Error: URL is EMPTY some reason' );
+                return;
+            }
+            // ... SUCCESS
+            GIW_Utils::log( 'Featured image successful. URL = ' . $featured_image_url );
+
+            // update stats to included uploaded featured image
+            $this->stats[ 'images' ][ 'uploaded' ][ $featured_image_id ] = $featured_image_url;
+
+            // Associate the uploaded image to the post
+            GIW_Utils::log( 'Associating featured image ' . $featured_image_id .' to post '. $post_id );
+            set_post_thumbnail( $post_id, $featured_image_id );
+        } catch (\Throwable $e) {
+            GIW_Utils::log( 'Unexpected exception. Error: ' . $e->getMessage() );
+        }
+    }
+
 
     public function publish(){
 
