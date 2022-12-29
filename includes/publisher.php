@@ -129,6 +129,7 @@ class GIW_Publisher{
             $content = GIW_Utils::process_content_template( $this->content_template, $html );
 
             // Get post details
+            $post_author = empty( $front_matter[ 'post_author' ] ) ? $this->post_author : $front_matter[ 'post_author' ];
             $post_title = empty( $front_matter[ 'title' ] ) ? $item_slug : $front_matter[ 'title' ];
             $post_status = empty( $front_matter[ 'post_status' ] ) ? 'publish' : $front_matter[ 'post_status' ];
             $post_excerpt = empty( $front_matter[ 'post_excerpt' ] ) ? '' : $front_matter[ 'post_excerpt' ];
@@ -149,7 +150,7 @@ class GIW_Publisher{
             $github_url = $item_props[ 'github_url' ];
 
         }else{
-
+            $post_author = $this->post_author;
             $post_title = $item_slug;
             $post_status = 'publish';
             $post_excerpt = '';
@@ -183,7 +184,7 @@ class GIW_Publisher{
             'post_name' => $item_slug,
             'post_content' => $content,
             'post_type' => $this->post_type,
-            'post_author' => $this->post_author,
+            'post_author' => $post_author,
             'post_status' => $post_status,
             'post_excerpt' => $post_excerpt,
             'post_parent' => $parent,
