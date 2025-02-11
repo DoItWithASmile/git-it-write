@@ -1,20 +1,42 @@
 <?php
+// TODO: replace GIW_Utils::log with other logger
+// FIXE: ...
+
+// FILE USES STRICT TYPING
+declare( strict_types=1 );
+// NAMESPACE
+namespace com\aakashweb\wordpress\plugin\git_it_write;
+// IMPORTS
+use com\aakashweb\git\GitRepository;
+
+// FIXME: todo
+
 
 if( ! defined( 'ABSPATH' ) ) exit;
 
-class GIW_Publisher{
+/**
+ * 
+ */
+final class GIW_Publisher{
+    /* ====================
+     * CONSTANTS
+     * ==================== */
+    /**
+     * prefix of files and directories, which shall be ignored by crawler
+     */
+    const IGNORED_FILE_PREFIX = [ '_', '.' ];
 
-    public $repository;
+
+    /* ====================
+     * PROPERTIES
+     * ==================== */
+    public GitRepository    $repository;
 
     public $branch;
 
     public $folder;
 
-    public $post_type;
-
-    public $post_author;
-
-    public $content_template;
+    public $post_metadata;
 
     public $stats = array(
         'posts' => array(
@@ -28,31 +50,38 @@ class GIW_Publisher{
         )
     );
 
-    public $default_post_meta = array(
-        'sha' => '',
-        'github_url' => ''
-    );
-
     public $allowed_file_types = array();
 
-    public function __construct( GIW_Repository $repository, $repo_config ){
 
+    /* ====================
+     * CONSTRUCTOR
+     * ==================== */
+    public function __construct(
+        GitRepository   $repository,
+        array           $repo_config 
+    ) {
         $this->repository = $repository;
-        $this->post_type = $repo_config[ 'post_type' ];
         $this->branch = empty( $repo_config[ 'branch' ] ) ? 'master' : $repo_config[ 'branch' ];
         $this->folder = $repo_config[ 'folder' ];
-        $this->post_author = $repo_config[ 'post_author' ];
-        $this->content_template = $repo_config[ 'content_template' ];
+
+        // create default metadata for post
+        $this->post_metadata = new GIW_Metadata(
+            $repo_config[ 'post_type' ],
+            $repo_config[ 'post_author' ],
+            $repo_config[ 'content_template' ]
+        );
 
         $this->parsedown = new GIW_Parsedown();
         $this->parsedown->uploaded_images = get_option( 'giw_uploaded_images', array() );
 
-        $this->allowed_file_types = Git_It_Write::allowed_file_types();
-
+        $this->allowed_file_types = Git_It_Write_SE_Edition::DEFAULT_ALLOWED_FILE_TYPES;
     }
 
-    public function get_posts_by_parent( $parent ){
 
+    /* ====================
+     * METHODS
+     * ==================== */
+    public function get_posts_by_parent( $parent ){
         $result = array();
         $posts = get_posts(array(
             'post_type' => $this->post_type,
@@ -71,7 +100,6 @@ class GIW_Publisher{
         }
 
         return $result;
-
     }
 
     public function get_post_meta( $post_id ){
@@ -91,7 +119,18 @@ class GIW_Publisher{
 
     }
 
-    public function create_post( $post_id, $item_slug, $item_props, $parent ){
+    
+    /**
+     * publishes a post
+     * 
+     * @return bool true, if successful
+     */
+    public function publishPost(
+         engineering\schumann\wordpress\common\Post $post,
+         $item_slug, 
+         $item_props, 
+         $parent 
+    ) : bool {
 
         GIW_Utils::log( sprintf( '---------- Checking post [%s] under parent [%s] ----------', $post_id, $parent ) );
 
@@ -178,6 +217,7 @@ class GIW_Publisher{
             'github_url' => $github_url
         ));
 
+        /*
         $post_details = array(
             'ID' => $post_id,
             'post_title' => $post_title,
@@ -194,122 +234,124 @@ class GIW_Publisher{
             'menu_order' => $menu_order,
             'meta_input' => $meta_input
         );
+        */
 
-        $new_post_id = wp_insert_post( $post_details );
+        $post_details = $post_metadata->toWordPressPost();
 
-        if( is_wp_error( $new_post_id ) || empty( $new_post_id ) ){
-            GIW_Utils::log( 'Failed to publish post - ' . $new_post_id );
+
+        $post = ...;
+
+        // publish post
+        if ( $post->publish() == E_SE_RETURN_TYPE::FAIL ){
+            // ERROR, something went wrong
             $this->stats[ 'posts' ][ 'failed' ]++;
+            // == FAIL ==
             return false;
-        }else{
-            GIW_Utils::log( '---------- Published post: ' . $new_post_id . ' ----------' );
-
-            // Set the post taxonomy
-            if( !empty( $taxonomy ) ){
-                foreach( $taxonomy as $tax_name => $terms ){
-                    GIW_Utils::log( 'Setting taxonomy [' . $tax_name . '] to post.' );
-                    if( !taxonomy_exists( $tax_name ) ){
-                        GIW_Utils::log( 'Skipping taxonomy [' . $tax_name . '] - does not exist.' );
-                        continue;
-                    }
-
-                    $set_tax = wp_set_object_terms( $new_post_id, $terms, $tax_name );
-                    if( is_wp_error( $set_tax ) ){
-                        GIW_Utils::log( 'Failed to set taxonomy [' . $set_tax->get_error_message() . ']' );
-                    }
-                }
-            }
-
-            if( $stick_post == 'yes' ){
-                GIW_Utils::log( 'Marking post [' . $new_post_id . '] as sticky' );
-                stick_post( $new_post_id );
-            }
-
-            if( $stick_post == 'no' ){
-                GIW_Utils::log( 'Removing post [' . $new_post_id . '] as sticky' );
-                unstick_post( $new_post_id );
-            }
-
-            $stat_key = $new_post_id == $post_id ? 'updated' : 'new';
-            $this->stats[ 'posts' ][ $stat_key ][ $new_post_id ] = get_post_permalink( $new_post_id );
-
-			// Upload the featured image, if any was set
-            // source: fullbright/git-it-write, commit d95887a087c7f5f854eed0f82ec68f151c72da74
-			$featured_image = $front_matter[ 'featured_image' ];
-			if(!empty( $featured_image )){
-				GIW_Utils::log( 'Uploading featured image ' . $featured_image );
-				$this->upload_featured_image($featured_image, $new_post_id);
-			} else {
-				GIW_Utils::log( 'Featured image not set/empty');
-			}            
-
-            return $new_post_id;
         }
 
+        // update statistics
+        $stat_key = $post->getId() == $old_post_id ? 'updated' : 'new';
+        $this->stats[ 'posts' ][ $stat_key ][ $post->getId() ] = get_post_permalink( $post->getId() );
+
+        // == SUCCESS ==
+        return $post->getId();
     }
 
-    public function create_posts( $repo_structure, $parent ){
 
+    /**
+     * 
+     */
+    public function createPostForFile(
+        string $item_slug,
+        array  $item_props,
+        array  $existing_posts
+    ) : void {
+        if( $item_slug == 'index' ){
+            GIW_Utils::log( 'Skipping separate post for index' );
+            continue;
+        }
+
+        if( !in_array( $item_props[ 'file_type' ], $this->allowed_file_types ) ){
+            GIW_Utils::log( 'Skipping file as it is not an allowed file type' );
+            continue;
+        }
+
+        $item_slug_clean = sanitize_title( $item_slug );
+        $post_id = array_key_exists( $item_slug_clean, $existing_posts ) ? $existing_posts[ $item_slug_clean ][ 'id' ] : 0;
+// FIXME: create_post -> publishPost
+        $this->create_post( $post_id, $item_slug, $item_props, $parent );
+    }
+
+
+    /**
+     * 
+     */
+    public function createPostsForDirectory( ... ) : void {
+        $directory_post = false;
+        $item_slug_clean = sanitize_title( $item_slug );
+
+        if( array_key_exists( $item_slug_clean, $existing_posts ) ){
+            $directory_post = $existing_posts[ $item_slug_clean ][ 'id' ];
+
+            $index_props = array_key_exists( 'index', $item_props[ 'items' ] ) ? $item_props[ 'items' ][ 'index' ] : false;
+// FIXME: create_post -> publishPost
+            $this->create_post( $directory_post, $item_slug, $index_props, $parent );
+
+        }else{
+            
+            // If index posts exists for the directory
+            if( array_key_exists( 'index', $item_props[ 'items' ] ) ){
+                $index_props = $item_props[ 'items' ][ 'index' ];
+// FIXME: create_post -> publishPost
+                $directory_post = $this->create_post( 0, $item_slug, $index_props, $parent );
+            }else{
+// FIXME: create_post -> publishPost
+                $directory_post = $this->create_post( 0, $item_slug, false, $parent );
+            }
+
+        }
+
+        $this->create_posts( $item_props[ 'items' ], $directory_post );
+    }
+    
+
+    /**
+     * 
+     */
+    public function create_posts( 
+        $repo_structure, 
+        $parent 
+    ) : void {
         $existing_posts = $this->get_posts_by_parent( $parent );
 
         foreach( $repo_structure as $item_slug => $item_props ){
-
             GIW_Utils::log( 'At repository item - ' . $item_slug);
 
+            // ignore prefixed files
             $first_character = substr( $item_slug, 0, 1 );
-            if( in_array( $first_character, array( '_', '.' ) ) ){
+            if( in_array( $first_character, GIS_Publisher::IGNORED_FILE_PREFIX ) ){
                 GIW_Utils::log( 'Items starting with _ . are skipped for publishing' );
                 continue;
             }
 
-            if( $item_props[ 'type' ] == 'file' ){
+            // create post depending on type
+            swtich ( $item_props[ 'type' ] ){
+                case 'file':
+                // case 'blob':
+                    $this->createPostForFile( $item_slug, $item_props, $existing_posts );
+                    break;
 
-                if( $item_slug == 'index' ){
-                    GIW_Utils::log( 'Skipping separate post for index' );
-                    continue;
-                }
+                case 'directory':
+                // case 'tree':
+                    $this->createPostsForDirectory( ... );
+                    break;
 
-                if( !in_array( $item_props[ 'file_type' ], $this->allowed_file_types ) ){
-                    GIW_Utils::log( 'Skipping file as it is not an allowed file type' );
-                    continue;
-                }
-
-                $item_slug_clean = sanitize_title( $item_slug );
-                $post_id = array_key_exists( $item_slug_clean, $existing_posts ) ? $existing_posts[ $item_slug_clean ][ 'id' ] : 0;
-
-                $this->create_post( $post_id, $item_slug, $item_props, $parent );
-
+                default:
+                    // ignore
+// FIXME: log would be nice here
+                    break;                    
             }
-
-            if( $item_props[ 'type' ] == 'directory' ){
-
-                $directory_post = false;
-                $item_slug_clean = sanitize_title( $item_slug );
-
-                if( array_key_exists( $item_slug_clean, $existing_posts ) ){
-                    $directory_post = $existing_posts[ $item_slug_clean ][ 'id' ];
-
-                    $index_props = array_key_exists( 'index', $item_props[ 'items' ] ) ? $item_props[ 'items' ][ 'index' ] : false;
-                    $this->create_post( $directory_post, $item_slug, $index_props, $parent );
-
-                }else{
-                    
-                    // If index posts exists for the directory
-                    if( array_key_exists( 'index', $item_props[ 'items' ] ) ){
-                        $index_props = $item_props[ 'items' ][ 'index' ];
-                        $directory_post = $this->create_post( 0, $item_slug, $index_props, $parent );
-                    }else{
-                        $directory_post = $this->create_post( 0, $item_slug, false, $parent );
-                    }
-
-                }
-
-                $this->create_posts( $item_props[ 'items' ], $directory_post );
-
-            }
-
         }
-
     }
 
     public function upload_images(){
@@ -391,22 +433,25 @@ class GIW_Publisher{
             $file_array = array();
             $file_array['name'] = wp_basename( $matches[0] );
 
-            $url_path = parse_url( $file, PHP_URL_PATH );
-            $url_filename = '';
-            if ( is_string( $url_path ) && '' !== $url_path ) {
-                $url_filename = basename( $url_path );
+            // modification of media_sideload_image from wp-admin/includes/media.php
+            {
+                $url_path = parse_url( $file, PHP_URL_PATH );
+                $url_filename = '';
+                if ( is_string( $url_path ) && '' !== $url_path ) {
+                    $url_filename = basename( $url_path );
+                }
+
+                $temp_file_path = wp_tempnam( $url_filename );
+                if ( ! $temp_file_path ) {
+                    return new WP_Error( 'http_no_file', __( 'Could not create temporary file.' ) );
+                }
+
+                $contents = $this->repository->get_item_content($image_props);
+                file_put_contents($temp_file_path, $contents);
+
+                // Download file to temp location.
+                $file_array['tmp_name'] = $temp_file_path;
             }
-
-            $temp_file_path = wp_tempnam( $url_filename );
-            if ( ! $temp_file_path ) {
-                return new WP_Error( 'http_no_file', __( 'Could not create temporary file.' ) );
-            }
-
-            $contents = $this->repository->get_item_content($image_props);
-            file_put_contents($temp_file_path, $contents);
-
-            // Download file to temp location.
-            $file_array['tmp_name'] = $temp_file_path;
 
             // If error storing temporarily, return the error.
             if ( is_wp_error( $file_array['tmp_name'] ) ) {
@@ -509,7 +554,10 @@ class GIW_Publisher{
     }
 
 
-    public function publish(){
+    /**
+     * 
+     */
+    public function publish() : ???|array {
 
         $repo_structure = $this->repository->structure;
         $folder = trim( $this->folder );
@@ -518,10 +566,11 @@ class GIW_Publisher{
             if( array_key_exists( $folder, $repo_structure ) ){
                 $repo_structure = $repo_structure[ $folder ][ 'items' ];
             }else{
+                // == SKIPPED ==
                 return array(
-                    'result' => 0,
+                    'result'  => E_SE_RESULT_TYPE::SKIPPED,
                     'message' => sprintf( 'No folder %s exists in the repository', $folder ),
-                    'stats' => $this->stats
+                    'stats'   => $this->stats
                 );
             }
         }
@@ -537,29 +586,29 @@ class GIW_Publisher{
         $this->create_posts( $repo_structure, 0 );
         GIW_Utils::log( '++++++++++ Done ++++++++++' );
 
-        $message = 'Successfully published posts';
-        $result = 1;
-
-        if( $this->stats[ 'posts' ][ 'failed' ] > 0 || $this->stats[ 'images' ][ 'failed' ] > 0 ){
-            $result = 2;
-            $message = 'One or more failures occurred while publishing';
-        }
-
-        if( count( $this->stats[ 'posts' ][ 'new' ] ) == 0 && count( $this->stats[ 'posts' ][ 'updated' ] ) == 0 ){
-            $result = 3;
-            $message = 'No new changed were made. All posts are up to date.';
-        }
-
-        $end_result = array(
-            'result' => $result,
-            'message' => $message,
+        $result = array(
             'stats' => $this->stats
-        );
+        );     
 
-        GIW_Utils::log( $end_result );
+        if ( $this->stats[ 'posts' ][ 'failed' ] > 0 || $this->stats[ 'images' ][ 'failed' ] > 0 ){
+            // == FAIL ==
+            $result[ 'result'  ] = $result  = E_SE_RESULT_TYPE::FAIL;
+            $result[ 'message' ] = 'One or more failures occurred while publishing';
+        }
+        else if ( count( $this->stats[ 'posts' ][ 'new' ] ) == 0 && count( $this->stats[ 'posts' ][ 'updated' ] ) == 0 ){
+            // == SKIPPED ==
+            $result[ 'result'  ] = E_SE_RESULT_TYPE::SKIPPED;
+            $result[ 'message' ] = 'No new changed were made. All posts are up to date.';
+        }
+        else {
+            // == SUCCESS ==
+            $result[ 'result'  ] = E_SE_RESULT_TYPE::SUCCESS;
+            $result[ 'message' ] = 'Successfully published posts';
+        }
 
-        return $end_result;
+        GIW_Utils::log( $result );
 
+        return $result;
     }
 
 }

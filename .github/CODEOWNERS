@@ -1,0 +1,12 @@
+# ====================
+# Git it write rewrite
+# ====================
+* @DoItWithASmile
+readme* @DoItWithASmile @vaakash
+
+
+# ====================
+# Git it write original
+# ====================
+/res/* @vaakash
+/src/com.aakashweb* @vaakash

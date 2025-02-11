@@ -1,14 +1,14 @@
-# Git it Write - Write posts from Github
-Contributors: vaakash
-Author URI: https://www.aakashweb.com/
-Plugin URI: https://www.aakashweb.com/wordpress-plugins/git-it-write/
-Tags: github, markdown, editor, publish, posts, wordpress, import, custom post types
-Donate link: https://www.paypal.me/vaakash/
-License: GPLv2 or later
-Requires PHP: 5.3
-Requires at least: 4.4
-Tested up to: 6.1.1
-Stable tag: 1.6
+# Git it Write - Write posts from Github (PHP 8.0.2+ SE Edition)
+Contributors:       DoItWithASmile, vaakash
+Author URI:         https://schumann.engineering/
+Plugin URI:         https://schumann.engineering/wordpress/plugins/git-it-write/
+Tags:               git, github, markdown, editor, publish, posts, wordpress, import, custom post types
+Donate link:        https://www.paypal.me/vaakash/
+License:            GPLv3
+Requires PHP:       8.0.2
+Requires at least:  5.6
+Tested up to:       6.1.1
+Stable tag:         2.0-SE
 
 Publish markdown files present in a Github repository as posts to WordPress automatically
 
@@ -141,46 +141,10 @@ Yes, if you want to pull posts from a folder in a repository then you can specif
 
 ## Changelog
 
-### 1.7 (dev)
-* Fix: Images were not uploaded for private repositories. (Thanks to https://github.com/lukaszpiotrluczak for the contribution)
-* Fix: Webhook publish request fails to upload images.
-
-### 1.6
-* New: Options like comment status, page template, sticky post can now be set.
-* New: New option to skip file from being published.
-
-### 1.5
-* New: Post date can now be set.
-* Fix: Enhancements to data escaping in the admin page.
-
-### 1.4
-* Fix: Repository not found issue by adding Github authentication.
-* Fix: Duplicate posts when filename has special characters.
-* Fix: PHP warning when directory has no index.md file.
-
-### 1.3
-* New: Support for git branches (Thanks to https://github.com/AppalachiaInteractive for the contribution)
-* New: Logs directory has been changed to the uploads directory.
-* Fix: Minor admin page enhancements.
-
-### 1.2
-* New: Support for custom fields
-* New: New shortcode attribute in `[giw_edit_link]` to automatically wrap in `p` tag.
-* Fix: Added permission callback for the webhook REST API.
-* Fix: Minor admin UI enhancements.
-
-### 1.1
-* New: Support for Parsedown extra
-
-### 1.0.1
-* Fix: Webhook is changed to `POST` method.
-* Fix: Readme formatting.
-
-### 1.0
-* First version of the plugin.
-
+### 2.0-SE
+* First version of the plugin by forking from https://wordpress.org/plugins/git-it-write and complete rewrite to PHP 8 language features for better testability, stability and quality.
 
 
 ## Upgrade Notice
 
-Version 1.0 is the first version of the plugin.
+Version 2.0-SE is the first version of the plugin.

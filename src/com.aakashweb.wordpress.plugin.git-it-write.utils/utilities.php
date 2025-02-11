@@ -1,8 +1,15 @@
 <?php
+// FILE USES STRICT TYPING
+declare( strict_types=1 );
+// NAMESPACE
+namespace com\aakashweb\wordpress\plugin\git_it_write;
+// IMPORTS
+// none
 
-if( ! defined( 'ABSPATH' ) ) exit;
 
-class GIW_Utils{
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+final class GIW_Utils{
 
     public static function log( $message = '' ){
         
@@ -81,7 +88,7 @@ class GIW_Utils{
          * ./hello/abcd.md?param=value.md#heading => ./hello/abcd/?param=value.md#heading
         */
 
-        $allowed_file_types = Git_It_Write::allowed_file_types();
+        $allowed_file_types = Git_It_Write_SE_Edition::DEFAULT_ALLOWED_FILE_TYPES;
 
         $parts = parse_url( $url );
 
@@ -110,7 +117,7 @@ class GIW_Utils{
 
     public static function get_repo_config_by_full_name( $full_name ){
 
-        $all_repos = Git_It_Write::all_repositories();
+        $all_repos = Git_It_Write_SE_Edition::all_repositories();
 
         $name_split = explode( '/', $full_name );
         if( count( $name_split ) != 2 ){

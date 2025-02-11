@@ -92,7 +92,7 @@ class GIW_Admin{
 
     public static function manage_repo(){
 
-        $all_repos = Git_It_Write::all_repositories();
+        $all_repos = Git_It_Write_SE_Edition::all_repositories();
 
         echo '<p class="toolbar">';
         echo '<a href="' . esc_url( self::link( 'new' ) ) . '" class="button button-primary"><span class="dashicons dashicons-plus"></span> Add a new repository to publish posts from</a>';
@@ -163,14 +163,14 @@ class GIW_Admin{
 
         self::save_repo_settings();
 
-        $all_repos = Git_It_Write::all_repositories();
+        $all_repos = Git_It_Write_SE_Edition::all_repositories();
         $g = self::clean_get();
         $id = 0;
 
         $page_title = ( $action == 'edit' ) ? 'Edit repository settings' : 'Add new repository to publish posts from';
         $save_button = ( $action == 'edit' ) ? 'Save settings' : 'Add repository' ;
 
-        $values = Git_It_Write::default_config();
+        $values = Git_It_Write_SE_Edition::DEFAULT_CONFIG;
 
         if( $action == 'edit' ){
 
@@ -270,7 +270,7 @@ class GIW_Admin{
 
         if( isset( $g[ 'id' ] ) && check_admin_referer( 'giw_delete_nonce' ) ){
 
-            $all_repos = $all_repos = Git_It_Write::all_repositories();
+            $all_repos = $all_repos = Git_It_Write_SE_Edition::all_repositories();
             $id = $g[ 'id' ];
             if( isset( $all_repos[ $id ] ) ){
                 unset( $all_repos[ $id ] );
@@ -321,7 +321,7 @@ class GIW_Admin{
             return;
         }
 
-        $all_repos = Git_It_Write::all_repositories();
+        $all_repos = Git_It_Write_SE_Edition::all_repositories();
         if( !isset( $all_repos[ $id ] ) ){
             self::print_notice( 'Invalid repository ID', 'error' );
             return;
@@ -341,7 +341,7 @@ class GIW_Admin{
         }
 
         echo '<div class="log_wrap">';
-        GIW_Publish_Handler::publish_by_id( $id );
+        GIW_Publish_Handler::publishRepositoryById( $id );
         echo '</div>';
 
     }
@@ -365,7 +365,7 @@ class GIW_Admin{
 
         echo '<h2>General settings</h2>';
 
-        $values = Git_It_Write::general_settings();
+        $values = Git_It_Write_SE_Edition::general_settings();
 
         echo '<form method="post">';
 
@@ -410,8 +410,8 @@ class GIW_Admin{
 
         if( $_POST && check_admin_referer( 'giw_edit_nonce' ) ){
 
-            $all_repos = Git_It_Write::all_repositories();
-            $defaults = Git_It_Write::default_config();
+            $all_repos = Git_It_Write_SE_Edition::all_repositories();
+            $defaults = Git_It_Write_SE_Edition::DEFAULT_CONFIG;
             $p = wp_parse_args( self::clean_post(), $defaults );
             $values = array();
             $is_new = false;
@@ -451,7 +451,7 @@ class GIW_Admin{
 
         if( $_POST && check_admin_referer( 'giw_gs_nonce' ) ){
             
-            $defaults = Git_It_Write::default_general_settings();
+            $defaults = Git_It_Write_SE_Edition::DEFAULT_GENERAL_SETTINGS();
             $p = wp_parse_args( self::clean_post(), $defaults );
 
             $values = array();

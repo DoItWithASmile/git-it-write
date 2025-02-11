@@ -1,29 +1,59 @@
 <?php
+// FILE USES STRICT TYPING
+declare( strict_types=1 );
+// NAMESPACE
+namespace com\aakashweb\wordpress\plugin\git_it_write;
+// IMPORTS
+use Symfony\Component\Yaml\Yaml;
+
+// FIXME: refactor and document code
 
 if( ! defined( 'ABSPATH' ) ) exit;
 
-use Symfony\Component\Yaml\Yaml;
-
-class GIW_Parsedown extends ParsedownExtra{
-
-    public $default_front_matter = array(
-        'title' => '',
-        'menu_order' => 0,
-        'post_status' => 'publish',
-        'post_excerpt' => '',
-        'post_date' => '',
-        'comment_status' => '',
-        'page_template' => '',
-        'taxonomy' => array(),
-        'custom_fields' => array(),
-        'stick_post' => '',
-        'skip_file' => ''
+/**
+ * 
+ */
+final class GIW_Parsedown extends ParsedownExtra{
+    /* ====================
+     * PROPERTIES
+     * ==================== */
+    /**
+     * ???
+     */
+    public array $default_front_matter = array(
+        'title'             => '',
+        'menu_order'        => 0,
+        'post_status'       => 'publish',
+        'post_excerpt'      => '',
+        'post_date'         => '',
+        'comment_status'    => '',
+        'page_template'     => '',
+        'taxonomy'          => array(),
+        'custom_fields'     => array(),
+        'stick_post'        => '',
+        'skip_file'         => ''
     );
 
-    public $uploaded_images = array();
 
-    // Parses the front matter and the markdown from the content
-    public function parse_content( $text ){
+    /**
+     * ???
+     */
+    public array $uploaded_images = array();
+
+
+    /* ====================
+     * METHODS
+     * ==================== */
+    /**
+     * Parses the front matter and the markdown from the content
+     * 
+     * @param   ??? $text
+     * 
+     * @return  ???
+     */
+    public function parse_content( 
+        $text
+    ){
 
         $pattern = '/^[\s\r\n]?---[\s\r\n]?$/sm';
         $parts = preg_split( $pattern, PHP_EOL.ltrim( $text ) );
@@ -47,8 +77,17 @@ class GIW_Parsedown extends ParsedownExtra{
 
     }
 
-    public function inlineLink( $excerpt ){
 
+    /**
+     * ???
+     * 
+     * @param   ??? $excerpt
+     * 
+     * @return  ???
+     */
+    public function inlineLink( 
+        $excerpt
+    ){
         $link_data = parent::inlineLink( $excerpt );
 
         if( empty( $link_data ) ){
@@ -73,11 +112,19 @@ class GIW_Parsedown extends ParsedownExtra{
         $link_data[ 'element' ][ 'attributes' ][ 'href' ] = $prefix . $href;
 
         return $link_data;
-
     }
 
-    public function inlineImage( $excerpt ){
 
+    /**
+     * ???
+     * 
+     * @param  ???  $excerpt
+     * 
+     * @return ???
+     */
+    public function inlineImage( 
+        $excerpt
+    ){
         $image_data = parent::inlineImage( $excerpt );
 
         if( empty( $image_data ) ){
@@ -117,9 +164,7 @@ class GIW_Parsedown extends ParsedownExtra{
         }
 
         return $image_data;
-
     }
-
 }
 
 ?>
